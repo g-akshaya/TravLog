@@ -1,10 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
-// 🗺️ Import the new MapDisplay component
 import MapDisplay from './MapDisplay'; 
+
+// Utility function to get currency symbol (simple implementation)
+const getCurrencySymbol = (currencyCode) => {
+    const map = {
+        'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'INR': '₹'
+    };
+    return map[currencyCode] || currencyCode;
+};
 
 function MyEntries() {
     const [travelEntries, setTravelEntries] = useState([]);
@@ -34,12 +41,29 @@ function MyEntries() {
     };
 
     const handleAddNewEntry = () => {
-        navigate('/home'); // Assuming /home is where your new entry form is located
+        navigate('/home'); 
     };
 
     const handleCloseModal = () => {
         setSelectedEntry(null);
         localStorage.removeItem("selectedEntry");
+    };
+
+    // Helper component to calculate total expense for the modal
+    const TotalExpenseDisplay = ({ expenses, currency }) => {
+        const total = useMemo(() => {
+            if (!expenses) return 0;
+            return expenses.reduce((sum, item) => sum + (item.amount || 0), 0);
+        }, [expenses]);
+
+        const symbol = getCurrencySymbol(currency);
+
+        return (
+            <div className="alert alert-success mt-3 p-2">
+                <strong>Total Trip Cost:</strong>
+                <span className="float-end">{symbol} {total.toFixed(2)} {currency}</span>
+            </div>
+        );
     };
 
     return (
@@ -90,7 +114,6 @@ function MyEntries() {
                                         {new Date(entry.createdAt).toLocaleDateString()}
                                     </small>
                                 </div>
-                                {/* 🗺️ Display map icon if location exists */}
                                 {entry.location && entry.location.coordinates && (
                                     <span className="badge bg-success float-end"><i className="bi bi-globe me-1"></i>Geo-tagged</span>
                                 )}
@@ -127,12 +150,37 @@ function MyEntries() {
                                 {/* 🗺️ RENDER MAP DISPLAY IN MODAL */}
                                 {selectedEntry.location && (
                                     <>
-                                        <h6 className="mt-2 text-muted">Location: {selectedEntry.location.name || 'Coordinates Listed Below'}</h6>
+                                        <h6 className="mt-2 text-muted">
+                                            <i className="bi bi-pin-map me-1"></i>
+                                            Location: {selectedEntry.location.name || 'Coordinates Listed Below'}
+                                        </h6>
                                         <MapDisplay location={selectedEntry.location} />
                                     </>
                                 )}
                                 
                                 <p className="mt-3">{selectedEntry.content}</p>
+
+                                {/* 💰 DISPLAY EXPENSE BREAKDOWN */}
+                                {selectedEntry.expenses && selectedEntry.expenses.length > 0 && (
+                                    <>
+                                        <h6 className="mt-4 border-top pt-3 text-muted">
+                                            <i className="bi bi-cash-stack me-1"></i>
+                                            Expense Breakdown ({selectedEntry.currency})
+                                        </h6>
+                                        <ul className="list-group list-group-flush mb-3">
+                                            {selectedEntry.expenses.map((exp, index) => (
+                                                <li key={index} className="list-group-item d-flex justify-content-between align-items-center">
+                                                    {exp.category}
+                                                    <span>
+                                                        {getCurrencySymbol(selectedEntry.currency)} 
+                                                        {exp.amount ? exp.amount.toFixed(2) : 0}
+                                                    </span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                        <TotalExpenseDisplay expenses={selectedEntry.expenses} currency={selectedEntry.currency} />
+                                    </>
+                                )}
                                 
                             </div>
                             <div className="modal-footer">
