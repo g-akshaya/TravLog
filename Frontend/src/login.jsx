@@ -4,7 +4,8 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-function Login() {
+// ACCEPT the setUser function as a prop from the parent (App.jsx)
+function Login({ setUser }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -25,12 +26,20 @@ function Login() {
       });
       
       if (response.data.message === 'Login successful') {
-  localStorage.setItem('user', JSON.stringify(response.data.user));
-  console.log("Redirecting to home...");
-  navigate('/home');
-}
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        // IMPORTANT: Call setUser to update the global state in App.jsx
+        // This ensures the App knows the user is logged in.
+        setUser(response.data.user); 
+        
+        console.log("Redirecting to home...");
+        navigate('/home');
+      }
 
     } catch (err) {
+      // Clear local storage/state in case of login failure
+      localStorage.removeItem('user'); 
+      setUser(null);
       setError(err.response?.data?.error || 'Login failed. Please try again.');
     }
   };
