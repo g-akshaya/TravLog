@@ -8,6 +8,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+// The standard MongoDB URL connection is used here. 
+// Change "travel_notes" to your actual database name if needed.
 mongoose.connect("mongodb://localhost:27017/travel_notes")
 .then(() => console.log("MongoDB connected successfully"))
 .catch(err => console.error("MongoDB connection error:", err));
@@ -54,14 +56,17 @@ app.post('/login', (req, res) => {
     });
 });
 
+// 🗺️ MODIFIED ROUTE: Now accepts 'location' field
 app.post('/save-travel-entry', (req, res) => {
-  const { userEmail, title, content } = req.body;
+  // Destructure the new 'location' field
+  const { userEmail, title, content, location } = req.body;
 
   if (!userEmail || !title || !content) {
-    return res.status(400).json({ error: "All fields are required." });
+    return res.status(400).json({ error: "Required fields missing: userEmail, title, content." });
   }
 
-  entryModel.create({ userEmail, title, content })
+  // Pass the new 'location' data to the entryModel.create method
+  entryModel.create({ userEmail, title, content, location })
     .then(entry => {
       res.status(201).json({ message: "Entry saved successfully!", entry });
     })
@@ -70,7 +75,9 @@ app.post('/save-travel-entry', (req, res) => {
       res.status(500).json({ error: err.message });
     });
 });
+// ------------------------------------------------------------------
 
+// The GET route can remain the same, as the saved entries will now include the location data.
 app.get('/entries/:userEmail', (req, res) => {
   const { userEmail } = req.params;
 
@@ -81,8 +88,6 @@ app.get('/entries/:userEmail', (req, res) => {
       res.status(500).json({ error: err.message });
     });
 });
-
-
 
 
 app.listen(3001, () => {

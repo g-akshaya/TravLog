@@ -3,6 +3,8 @@ import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
+// 🗺️ Import the new MapDisplay component
+import MapDisplay from './MapDisplay'; 
 
 function MyEntries() {
     const [travelEntries, setTravelEntries] = useState([]);
@@ -32,7 +34,7 @@ function MyEntries() {
     };
 
     const handleAddNewEntry = () => {
-        navigate('/home');
+        navigate('/home'); // Assuming /home is where your new entry form is located
     };
 
     const handleCloseModal = () => {
@@ -88,6 +90,10 @@ function MyEntries() {
                                         {new Date(entry.createdAt).toLocaleDateString()}
                                     </small>
                                 </div>
+                                {/* 🗺️ Display map icon if location exists */}
+                                {entry.location && entry.location.coordinates && (
+                                    <span className="badge bg-success float-end"><i className="bi bi-globe me-1"></i>Geo-tagged</span>
+                                )}
                                 <p className="mb-1 text-truncate" style={{ maxHeight: '2.5em', overflow: 'hidden', color: '#6b5847' }}>
                                     {entry.content}
                                 </p>
@@ -117,9 +123,22 @@ function MyEntries() {
                                 <button type="button" className="btn-close" onClick={handleCloseModal}></button>
                             </div>
                             <div className="modal-body">
-                                <p>{selectedEntry.content}</p>
+                                
+                                {/* 🗺️ RENDER MAP DISPLAY IN MODAL */}
+                                {selectedEntry.location && (
+                                    <>
+                                        <h6 className="mt-2 text-muted">Location: {selectedEntry.location.name || 'Coordinates Listed Below'}</h6>
+                                        <MapDisplay location={selectedEntry.location} />
+                                    </>
+                                )}
+                                
+                                <p className="mt-3">{selectedEntry.content}</p>
+                                
                             </div>
                             <div className="modal-footer">
+                                <small className="me-auto text-muted">
+                                    Created: {new Date(selectedEntry.createdAt).toLocaleDateString()}
+                                </small>
                                 <button type="button" className="btn btn-secondary" onClick={handleCloseModal}>
                                     Close
                                 </button>
