@@ -54,18 +54,15 @@ app.post('/login', (req, res) => {
     });
 });
 
-// 🗺️💰 MODIFIED ROUTE: Now accepts 'location', 'expenses' (array), and 'currency'
+// MODIFIED POST ROUTE: Accepts location, expenses, currency, AND country
 app.post('/save-travel-entry', (req, res) => {
-  // Destructure all possible fields, including the new ones
-  const { userEmail, title, content, location, expenses, currency } = req.body;
+  const { userEmail, title, content, location, expenses, currency, country } = req.body;
 
-  // Keep the check for essential fields
   if (!userEmail || !title || !content) {
     return res.status(400).json({ error: "Required fields missing: userEmail, title, and content." });
   }
 
-  // Pass all fields, including the optional location and structured expenses/currency
-  entryModel.create({ userEmail, title, content, location, expenses, currency })
+  entryModel.create({ userEmail, title, content, location, expenses, currency, country })
     .then(entry => {
       res.status(201).json({ message: "Entry saved successfully!", entry });
     })
@@ -74,6 +71,24 @@ app.post('/save-travel-entry', (req, res) => {
       res.status(500).json({ error: err.message });
     });
 });
+
+// 🗑️ NEW DELETE ROUTE: Deletes an entry by ID
+app.delete('/entries/:id', (req, res) => {
+  const { id } = req.params;
+
+  entryModel.findByIdAndDelete(id)
+    .then(entry => {
+      if (!entry) {
+        return res.status(404).json({ message: "Entry not found" });
+      }
+      res.status(200).json({ message: "Entry deleted successfully" });
+    })
+    .catch(err => {
+      console.error("Entry delete error:", err);
+      res.status(500).json({ error: err.message });
+    });
+});
+// END NEW DELETE ROUTE
 
 app.get('/entries/:userEmail', (req, res) => {
   const { userEmail } = req.params;

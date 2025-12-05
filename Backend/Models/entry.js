@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const expenseSchema = new mongoose.Schema({
-  category: { type: String, required: true }, // e.g., 'Food', 'Transport'
+  category: { type: String, required: true },
   amount: { type: Number, required: true, min: 0 },
 });
 
@@ -10,7 +10,7 @@ const entrySchema = new mongoose.Schema({
   title: { type: String, required: true },
   content: { type: String, required: true },
   
-  // 🗺️ GeoJSON Location Field 
+  // 🗺️ GeoJSON Location Field
   location: {
     type: {
       type: String, 
@@ -18,7 +18,7 @@ const entrySchema = new mongoose.Schema({
       required: false
     },
     coordinates: {
-      type: [Number], 
+      type: [Number],
       required: false
     },
     name: {
@@ -27,7 +27,13 @@ const entrySchema = new mongoose.Schema({
     }
   },
   
-  // 💰 NEW: Structured Expenses
+  // 🌍 NEW: Country Name for easy display
+  country: {
+    type: String,
+    required: false
+  },
+  
+  // 💰 Structured Expenses
   currency: { 
     type: String, 
     default: 'USD' 
