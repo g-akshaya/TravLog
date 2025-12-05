@@ -7,6 +7,7 @@ import MyEntries from './entries';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Gallery from './Gallery'; 
 import Profile from './Profile'; 
+import Landing from './Landing'; // 🆕 Add this import
 
 function App() {
   const [user, setUser] = useState(null);
@@ -29,10 +30,14 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Authentication Routes */}
         <Route path="/signup" element={<Signup />} />
         {/* Pass setUser to Login to update authentication state */}
         <Route path="/login" element={<Login setUser={setUser} />} /> 
         
+        {/* 🆕 New Landing Page Route: accessible to all */}
+        <Route path="/landing" element={<Landing />} />
+
         {/* Existing Authenticated Routes */}
         <Route
           path="/home"
@@ -43,7 +48,7 @@ function App() {
           element={isAuthenticated() ? <MyEntries /> : <Navigate to="/login" />}
         />
         
-        {/* 🆕 NEW Authenticated Routes for Menu */}
+        {/* NEW Authenticated Routes for Menu */}
         <Route
           path="/gallery"
           element={isAuthenticated() ? <Gallery /> : <Navigate to="/login" />}
@@ -53,10 +58,10 @@ function App() {
           element={isAuthenticated() ? <Profile /> : <Navigate to="/login" />}
         />
 
-        {/* Default route */}
+        {/* Default route: Directs to /home if authenticated, otherwise to /landing */}
         <Route
           path="/"
-          element={<Navigate to={isAuthenticated() ? "/home" : "/login"} />}
+          element={<Navigate to={isAuthenticated() ? "/home" : "/landing"} />}
         />
       </Routes>
     </BrowserRouter>
