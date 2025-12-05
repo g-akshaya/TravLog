@@ -4,38 +4,12 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-/**
- * Login.jsx — two-modal reset flow with a safe dev fallback
- *
- * Behavior:
- * - Forgot password -> enter email modal
- * - Then -> set new password modal
- * - Calls POST /reset-password { email, newPassword }
- * - If the backend call fails, attempts a localStorage fallback (dev only):
- *    - If a user object exists in localStorage, updates its password field and saves it
- *    - This allows local testing without server
- *
- * SECURITY: fallback modifies only localStorage and is not secure. Do NOT rely on this in production.
- */
-
 function Login({ setUser }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-
-  // forgot/reset modal states
-  const [forgotOpen, setForgotOpen] = useState(false); // step 1: enter email
-  const [resetOpen, setResetOpen] = useState(false);   // step 2: set new password
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotLoading, setForgotLoading] = useState(false);
-  const [forgotResult, setForgotResult] = useState(null);
-
-  const [resetLoading, setResetLoading] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [resetResult, setResetResult] = useState(null);
 
   const navigate = useNavigate();
   const cardRef = useRef(null);
@@ -51,6 +25,7 @@ function Login({ setUser }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
     if (!email || !password) {
       setError("Please fill in all fields");
       return;
@@ -81,138 +56,8 @@ function Login({ setUser }) {
     }
   };
 
-  // Step 1: Submit email and open reset modal
-  const handleForgotSubmit = async (e) => {
-    e && e.preventDefault();
-    setForgotResult(null);
-
-    if (!forgotEmail) {
-      setForgotResult({ type: "error", message: "Please enter your email address." });
-      return;
-    }
-
-    setForgotLoading(true);
-    try {
-      // Optional: verify or log request with backend; we skip forcing backend here and proceed
-      // You can enable a server-side verification call if you want:
-      // await axios.post("http://localhost:3001/verify-reset-request", { email: forgotEmail });
-
-      setForgotResult({ type: "success", message: "Proceed to set a new password." });
-
-      setTimeout(() => {
-        setForgotLoading(false);
-        setForgotOpen(false);
-        setResetOpen(true);
-      }, 350);
-    } catch (err) {
-      setForgotResult({
-        type: "error",
-        message: err.response?.data?.error || "Unable to process request. Try again later.",
-      });
-      setForgotLoading(false);
-    }
-  };
-
-  // Step 2: Submit new password: try server; fallback to localStorage if server fails
-  const handleResetSubmit = async (e) => {
-    e && e.preventDefault();
-    setResetResult(null);
-
-    if (!newPassword || !confirmPassword) {
-      setResetResult({ type: "error", message: "Please fill both password fields." });
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setResetResult({ type: "error", message: "Passwords do not match." });
-      return;
-    }
-    if (newPassword.length < 6) {
-      setResetResult({ type: "error", message: "Choose a password at least 6 characters long." });
-      return;
-    }
-
-    setResetLoading(true);
-
-    try {
-      // Primary: call backend to reset password
-      const resp = await axios.post("http://localhost:3001/reset-password", {
-        email: forgotEmail,
-        newPassword,
-      });
-
-      const msg = resp.data?.message || "Password updated successfully.";
-      setResetResult({ type: "success", message: msg });
-
-      // close modal after brief pause
-      setTimeout(() => {
-        setResetLoading(false);
-        setResetOpen(false);
-        setNewPassword("");
-        setConfirmPassword("");
-        setForgotEmail("");
-      }, 700);
-    } catch (err) {
-      // Backend failed. Try a safe local fallback for development:
-      // If a local user object exists in localStorage, update it there so local testing can continue.
-      const serverMessage = err.response?.data?.error || null;
-
-      try {
-        const local = localStorage.getItem("user");
-        if (local) {
-          const userObj = JSON.parse(local);
-          // Update local user password field (development-only convenience)
-          userObj.password = newPassword;
-          localStorage.setItem("user", JSON.stringify(userObj));
-          setResetResult({
-            type: "success",
-            message:
-              "Backend failed but password updated locally for development/testing. You can now sign in locally.",
-          });
-
-          // close after small pause
-          setTimeout(() => {
-            setResetLoading(false);
-            setResetOpen(false);
-            setNewPassword("");
-            setConfirmPassword("");
-            setForgotEmail("");
-          }, 700);
-        } else {
-          // No local user to update — show the backend error (or generic)
-          setResetResult({
-            type: "error",
-            message: serverMessage || "Unable to reset password. Try again later.",
-          });
-          setResetLoading(false);
-        }
-      } catch (fallbackErr) {
-        setResetResult({
-          type: "error",
-          message: "Reset failed and fallback failed. Check console for details.",
-        });
-        console.error("Reset error:", err, "Fallback error:", fallbackErr);
-        setResetLoading(false);
-      }
-    }
-  };
-
-  const closeForgot = () => {
-    setForgotOpen(false);
-    setForgotEmail("");
-    setForgotResult(null);
-    setForgotLoading(false);
-  };
-
-  const closeReset = () => {
-    setResetOpen(false);
-    setNewPassword("");
-    setConfirmPassword("");
-    setResetResult(null);
-    setResetLoading(false);
-  };
-
   return (
-    <div className="login-root" role="main" aria-labelledby="login-heading">
+    <div className="login-root">
       <style>{`
         :root{
           --brand-1: #8b5e3c;
@@ -230,7 +75,7 @@ function Login({ setUser }) {
           background:
             radial-gradient(800px 300px at 10% 10%, rgba(255,250,245,0.28), transparent 10%),
             radial-gradient(800px 300px at 90% 90%, rgba(240,235,230,0.22), transparent 10%),
-            url('https://images.pexels.com/photos/163185/old-retro-antique-vintage-163185.jpeg?auto=compress&cs=tinysrgb&w=1600&h=900&dpr=2');
+            url('https://images.pexels.com/photos/163185/old-retro-antique-vintage-163185.jpeg');
           background-size:cover;
           background-position:center;
           font-family: 'Merriweather', serif;
@@ -257,36 +102,21 @@ function Login({ setUser }) {
           to   { opacity: 1; transform: translateY(0) scale(1); }
         }
 
-        .login-left { padding: 8px 12px; }
         .logo { display:flex; align-items:center; gap:12px; margin-bottom:8px; }
         .logo .badge{
           width:56px;
           height:56px;
           border-radius:12px;
-          display:inline-grid;
+          display:grid;
           place-items:center;
           color:#fff;
           background: linear-gradient(135deg,var(--brand-1), #6f3f2a);
           box-shadow: 0 8px 20px rgba(139,94,60,0.18);
           font-size:1.25rem;
         }
+
         .login-title{ font-size:1.6rem; color:var(--brand-1); margin:0; }
         .login-sub { margin-top:6px; color:var(--muted); font-style: italic; }
-
-        form { margin-top: 14px; }
-        .form-floating .form-control, .form-control {
-          background: #fffaf3;
-          border: 1px solid #ccb89d;
-          padding: 12px 14px;
-          border-radius: 10px;
-          transition: box-shadow .18s, transform .12s ease;
-        }
-        .form-control:focus {
-          outline: none;
-          box-shadow: 0 10px 30px rgba(139,94,60,0.12);
-          transform: translateY(-2px);
-          border-color: var(--brand-1);
-        }
 
         .input-with-icon { position: relative; }
         .input-with-icon .icon {
@@ -295,10 +125,24 @@ function Login({ setUser }) {
           top: 50%;
           transform: translateY(-50%);
           color: rgba(107,88,71,0.85);
-          font-size: 1.05rem;
           pointer-events: none;
         }
         .input-with-icon input { padding-left: 40px; }
+
+        .form-control {
+          background: #fffaf3;
+          border: 1px solid #ccb89d;
+          padding: 12px 14px;
+          border-radius: 10px;
+          transition: box-shadow .18s, transform .12s ease;
+        }
+
+        .form-control:focus {
+          outline: none;
+          box-shadow: 0 10px 30px rgba(139,94,60,0.12);
+          transform: translateY(-2px);
+          border-color: var(--brand-1);
+        }
 
         .password-toggle {
           position:absolute;
@@ -312,11 +156,8 @@ function Login({ setUser }) {
           border-radius:8px;
         }
 
-        .small-row { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:8px; }
-        .small-row a { color: var(--muted); text-decoration:none; font-size:0.92rem; }
-        .small-row a:hover { text-decoration:underline; }
-
         .cta-group { display:flex; gap:10px; margin-top:14px; }
+
         .btn-primary-animated {
           background: linear-gradient(90deg,var(--brand-1), var(--brand-2));
           color: #fff;
@@ -327,17 +168,26 @@ function Login({ setUser }) {
           box-shadow: 0 14px 32px rgba(139,94,60,0.16);
           transition: transform .18s cubic-bezier(.2,.9,.2,1), box-shadow .18s;
         }
-        .btn-primary-animated:hover { transform: translateY(-5px) scale(1.02); box-shadow: 0 26px 48px rgba(139,94,60,0.22); }
+
+        .btn-primary-animated:hover {
+          transform: translateY(-5px) scale(1.02);
+          box-shadow: 0 26px 48px rgba(139,94,60,0.22);
+        }
+
         .btn-ghost {
           background: transparent;
           color: var(--muted);
           border: 1px solid rgba(161,135,105,0.9);
           padding: 10px 14px;
           border-radius: 12px;
+          transition:.2s;
         }
-        .btn-ghost:hover { transform: translateY(-3px); background: rgba(161,135,105,0.04); }
 
-        .login-right { padding: 12px; display:flex; justify-content:center; align-items:center; }
+        .btn-ghost:hover {
+          transform: translateY(-3px);
+          background: rgba(161,135,105,0.04);
+        }
+
         .promo {
           width:100%;
           max-width:360px;
@@ -346,84 +196,51 @@ function Login({ setUser }) {
           background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.92));
           border:1px solid rgba(204,184,157,0.6);
           box-shadow: 0 12px 30px rgba(20,18,16,0.06);
-          transform-origin:center;
           animation: float 6s ease-in-out infinite;
         }
-        @keyframes float { 0% { transform: translateY(0) rotate(-0.8deg); } 50% { transform: translateY(-8px) rotate(0.8deg); } 100% { transform: translateY(0) rotate(-0.8deg); } }
-        .promo h4 { margin:0 0 6px 0; color:var(--brand-1); }
-        .promo p { margin:0; color:#7a6656; font-size:0.95rem; }
 
-        .images-row { display:flex; gap:8px; margin-top:12px; justify-content:center; }
-        .mini-img { width:84px; height:64px; object-fit:cover; border-radius:8px; box-shadow: 0 8px 18px rgba(0,0,0,0.06); }
-
-        .error-box { margin-top:10px; color:#7a2b2b; background: rgba(255,235,235,0.9); border:1px solid rgba(200,120,120,0.2); padding:10px; border-radius:8px; }
-
-        .shake { animation: shake 560ms cubic-bezier(.36,.07,.19,.97); }
-        @keyframes shake {
-          10%, 90% { transform: translate3d(-1px, 0, 0); }
-          20%, 80% { transform: translate3d(2px, 0, 0); }
-          30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-          40%, 60% { transform: translate3d(4px, 0, 0); }
+        @keyframes float {
+          0% { transform: translateY(0) rotate(-0.8deg); }
+          50% { transform: translateY(-8px) rotate(0.8deg); }
+          100% { transform: translateY(0) rotate(-0.8deg); }
         }
-
-        /* Modal styles */
-        .modal-overlay {
-          position: fixed;
-          inset: 0;
-          display: grid;
-          place-items: center;
-          background: rgba(6,6,6,0.45);
-          z-index: 2000;
-        }
-        .forgot-modal, .reset-modal {
-          width: 100%;
-          max-width: 420px;
-          padding: 18px;
-          border-radius: 12px;
-          background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.94));
-          border: 1px solid rgba(196,171,137,0.6);
-          box-shadow: 0 24px 60px rgba(18,16,14,0.24);
-          text-align: left;
-        }
-        .forgot-modal h4, .reset-modal h4 { margin: 0 0 8px 0; color: var(--brand-1); }
-        .forgot-modal p, .reset-modal p { margin: 0 0 12px 0; color: var(--muted); font-size: 0.95rem; }
-        .small-note { font-size: 0.9rem; color: #7a6656; margin-top:8px; }
-
-        .alert-success { background: rgba(230,255,230,0.95); color: #1d6b2e; padding: 10px; border-radius:8px; border:1px solid rgba(60,160,80,0.12); margin-bottom:10px;}
-        .alert-error { background: rgba(255,235,235,0.95); color: #7a2b2b; padding: 10px; border-radius:8px; border:1px solid rgba(200,120,120,0.12); margin-bottom:10px;}
 
         @media (max-width: 920px) {
-          .login-card { grid-template-columns: 1fr; padding:18px; gap:18px; }
-          .login-right { order: -1; }
-          .promo { max-width:100%; }
+          .login-card { grid-template-columns: 1fr; padding:18px; }
         }
+
+        .error-box {
+          margin-top:10px;
+          color:#7a2b2b;
+          background: rgba(255,235,235,0.9);
+          border:1px solid rgba(200,120,120,0.2);
+          padding:10px;
+          border-radius:8px;
+        }
+
       `}</style>
 
-      <div ref={cardRef} className="login-card" role="region" aria-label="Login panel">
-        {/* LEFT: Form */}
+      <div ref={cardRef} className="login-card">
         <div className="login-left">
-          <div className="logo" aria-hidden>
+          <div className="logo">
             <div className="badge"><i className="bi bi-compass-fill"></i></div>
             <div>
               <h3 className="login-title">TravLog</h3>
-              <div className="login-sub">Welcome back — pick up where you left off.</div>
+              <div className="login-sub">Welcome back — continue your journey.</div>
             </div>
           </div>
 
-          {error && <div className="error-box" role="alert">{error}</div>}
+          {error && <div className="error-box">{error}</div>}
 
-          <form onSubmit={handleSubmit} aria-describedby={error ? "error-msg" : undefined}>
+          <form onSubmit={handleSubmit}>
             <div className="mb-3 input-with-icon">
               <span className="icon"><i className="bi bi-envelope"></i></span>
               <input
-                aria-label="Email address"
                 type="email"
-                id="email"
                 className="form-control"
                 placeholder="Your registered email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
                 required
               />
             </div>
@@ -431,172 +248,45 @@ function Login({ setUser }) {
             <div className="mb-3 position-relative input-with-icon">
               <span className="icon"><i className="bi bi-key"></i></span>
               <input
-                aria-label="Password"
                 type={showPassword ? "text" : "password"}
-                id="password"
                 className="form-control"
                 placeholder="Your access code"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
                 required
               />
               <button
                 type="button"
                 className="password-toggle"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-                onClick={() => setShowPassword((s) => !s)}
-                title={showPassword ? "Hide password" : "Show password"}
+                onClick={() => setShowPassword(!showPassword)}
               >
                 <i className={`bi ${showPassword ? "bi-eye-slash" : "bi-eye"}`}></i>
               </button>
             </div>
 
-            <div className="small-row">
-              <div /> {/* layout balanced; removed Remember me */}
-              <a
-                href="#forgot"
-                onClick={(e) => {
-                  e.preventDefault();
-                  setForgotOpen(true);
-                  setForgotResult(null);
-                }}
-              >
-                Forgot password?
-              </a>
-            </div>
-
             <div className="cta-group">
-              <button disabled={isLoading} type="submit" className="btn-primary-animated" aria-disabled={isLoading}>
-                {isLoading ? "Signing in…" : <><i className="bi bi-journal-arrow-up me-2"></i>Log Back In</>}
+              <button className="btn-primary-animated" disabled={isLoading}>
+                {isLoading ? "Signing in…" : "Log In"}
               </button>
 
               <button
                 type="button"
                 className="btn-ghost"
                 onClick={() => navigate("/signup")}
-                aria-label="Sign up"
               >
-                <i className="bi bi-pencil-square me-2"></i>Create account
+                Create account
               </button>
             </div>
           </form>
         </div>
 
-        {/* RIGHT: Promo */}
-        <div className="login-right" aria-hidden>
+        <div className="login-right">
           <div className="promo">
             <h4>Capture Memories</h4>
-            <p>Geo-tag entries, upload photos, and keep expense notes — elegantly stored and easy to revisit.</p>
-
-            <div className="images-row" role="img" aria-label="Sample trip photos">
-              <img alt="sample" className="mini-img" src="https://images.pexels.com/photos/209898/pexels-photo-209898.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1" />
-              <img alt="sample" className="mini-img" src="https://images.pexels.com/photos/298292/pexels-photo-298292.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1" />
-              <img alt="sample" className="mini-img" src="https://images.pexels.com/photos/396547/pexels-photo-396547.jpeg?auto=compress&cs=tinysrgb&w=400&h=300&dpr=1" />
-            </div>
+            <p>Your journeys beautifully stored — photos, notes, maps & more.</p>
           </div>
         </div>
       </div>
-
-      {/* Forgot Password Modal - Step 1: Enter email */}
-      {forgotOpen && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="forgot-title">
-          <div className="forgot-modal" role="document">
-            <h4 id="forgot-title">Reset your password</h4>
-            <p>Enter the email address associated with your account. Next you'll be able to set a new password.</p>
-
-            {forgotResult && (
-              <div className={forgotResult.type === "success" ? "alert-success" : "alert-error"}>
-                {forgotResult.message}
-              </div>
-            )}
-
-            <form onSubmit={handleForgotSubmit}>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input
-                  className="form-control"
-                  aria-label="Email for password reset"
-                  type="email"
-                  placeholder="your-email@example.com"
-                  value={forgotEmail}
-                  onChange={(e) => setForgotEmail(e.target.value)}
-                  required
-                  style={{ flex: 1 }}
-                />
-                <button
-                  type="submit"
-                  className="btn-primary-animated"
-                  style={{ padding: "8px 12px" }}
-                  disabled={forgotLoading}
-                >
-                  {forgotLoading ? "Next…" : "Next"}
-                </button>
-              </div>
-
-              <div className="small-note">
-                For production you should require verification (email token / OTP). The flow here directly lets you set a new password for easier testing.
-              </div>
-
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 12 }}>
-                <button type="button" className="btn-ghost" onClick={() => closeForgot()}>Close</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Reset Password Modal - Step 2: Set new password */}
-      {resetOpen && (
-        <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="reset-title">
-          <div className="reset-modal" role="document">
-            <h4 id="reset-title">Set a new password</h4>
-            <p>Set a secure new password for <strong>{forgotEmail}</strong>.</p>
-
-            {resetResult && (
-              <div className={resetResult.type === "success" ? "alert-success" : "alert-error"}>
-                {resetResult.message}
-              </div>
-            )}
-
-            <form onSubmit={handleResetSubmit}>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                <input
-                  className="form-control"
-                  aria-label="New password"
-                  type="password"
-                  placeholder="New password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                />
-                <input
-                  className="form-control"
-                  aria-label="Confirm new password"
-                  type="password"
-                  placeholder="Confirm new password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
-                <button type="submit" className="btn-primary-animated" disabled={resetLoading}>
-                  {resetLoading ? "Updating…" : "Update password"}
-                </button>
-                <button type="button" className="btn-ghost" onClick={() => closeReset()}>Cancel</button>
-              </div>
-
-              <div className="small-note" style={{ marginTop: 10 }}>
-                After a successful reset you'll be able to sign in with your new password.
-                <div style={{ marginTop: 8, fontSize: 12, color: "#7a6656" }}>
-                  Note: If the server is unavailable, this page will attempt a local update (development only).
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
