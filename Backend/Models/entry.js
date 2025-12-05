@@ -10,7 +10,6 @@ const entrySchema = new mongoose.Schema({
   title: { type: String, required: true },
   content: { type: String, required: true },
   
-  // 🗺️ GeoJSON Location Field
   location: {
     type: {
       type: String, 
@@ -27,18 +26,22 @@ const entrySchema = new mongoose.Schema({
     }
   },
   
-  // 🌍 NEW: Country Name for easy display
   country: {
     type: String,
     required: false
   },
   
-  // 💰 Structured Expenses
   currency: { 
     type: String, 
     default: 'USD' 
   },
   expenses: [expenseSchema],
+
+  // 📸 NEW: Array to store uploaded image paths/URLs
+  images: [{
+    type: String, 
+    required: false 
+  }],
 
   createdAt: { type: Date, default: Date.now }
 }, { collection: 'save-travel-entry' });

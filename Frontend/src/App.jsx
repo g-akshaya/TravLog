@@ -5,6 +5,8 @@ import Login from './login';
 import Home from './home';
 import MyEntries from './entries';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import Gallery from './Gallery'; 
+import Profile from './Profile'; 
 
 function App() {
   const [user, setUser] = useState(null);
@@ -28,7 +30,10 @@ function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/signup" element={<Signup />} />
-        <Route path="/login" element={<Login setUser={setUser} />} />
+        {/* Pass setUser to Login to update authentication state */}
+        <Route path="/login" element={<Login setUser={setUser} />} /> 
+        
+        {/* Existing Authenticated Routes */}
         <Route
           path="/home"
           element={isAuthenticated() ? <Home /> : <Navigate to="/login" />}
@@ -37,6 +42,18 @@ function App() {
           path="/entries"
           element={isAuthenticated() ? <MyEntries /> : <Navigate to="/login" />}
         />
+        
+        {/* 🆕 NEW Authenticated Routes for Menu */}
+        <Route
+          path="/gallery"
+          element={isAuthenticated() ? <Gallery /> : <Navigate to="/login" />}
+        />
+        <Route
+          path="/profile"
+          element={isAuthenticated() ? <Profile /> : <Navigate to="/login" />}
+        />
+
+        {/* Default route */}
         <Route
           path="/"
           element={<Navigate to={isAuthenticated() ? "/home" : "/login"} />}

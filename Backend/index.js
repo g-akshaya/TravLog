@@ -1,12 +1,35 @@
 const express = require("express");
 const mongoose = require('mongoose');
 const cors = require("cors");
+const multer = require('multer'); // 📸 NEW: Import multer
+const path = require('path'); // 📸 NEW: Import path for file handling
 const travelModel = require("./Models/travel"); 
 const entryModel = require('./Models/entry');
 
 const app = express();
+// Note: We only use express.json() for non-file uploads (like login/register).
+// Multer handles the body parsing for '/save-travel-entry'.
 app.use(express.json());
 app.use(cors());
+
+// 📸 NEW: Serve static images from the 'uploads' directory
+// Create this directory in your Backend folder!
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
+// 📸 MULTER CONFIGURATION FOR FILE STORAGE
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    // Files will be saved in a folder named 'uploads' in the Backend directory
+    cb(null, 'uploads/'); 
+  },
+  filename: (req, file, cb) => {
+    // File name will be timestamp + original file extension
+    cb(null, Date.now() + path.extname(file.originalname)); 
+  }
+});
+const upload = multer({ storage: storage });
+
 
 mongoose.connect("mongodb://localhost:27017/travel_notes")
 .then(() => console.log("MongoDB connected successfully"))
@@ -54,25 +77,45 @@ app.post('/login', (req, res) => {
     });
 });
 
-// MODIFIED POST ROUTE: Accepts location, expenses, currency, AND country
-app.post('/save-travel-entry', (req, res) => {
+
+// 📸 MODIFIED POST ROUTE: Use Multer middleware to handle up to 5 files
+app.post('/save-travel-entry', upload.array('images', 5), async (req, res) => {
+  // Multer populates req.body and req.files (for multiple files)
   const { userEmail, title, content, location, expenses, currency, country } = req.body;
+  
+  // 📸 Extract paths of uploaded files
+  const imagePaths = req.files ? req.files.map(file => `/uploads/${file.filename}`) : [];
+
+  // Note: req.body.location and req.body.expenses come as strings from FormData.
+  // We must parse them back into JSON objects/arrays.
+  const parsedLocation = location ? JSON.parse(location) : null;
+  const parsedExpenses = expenses ? JSON.parse(expenses) : [];
 
   if (!userEmail || !title || !content) {
     return res.status(400).json({ error: "Required fields missing: userEmail, title, and content." });
   }
 
-  entryModel.create({ userEmail, title, content, location, expenses, currency, country })
-    .then(entry => {
-      res.status(201).json({ message: "Entry saved successfully!", entry });
-    })
-    .catch(err => {
-      console.error("Entry save error:", err);
-      res.status(500).json({ error: err.message });
+  try {
+    const newEntry = await entryModel.create({ 
+      userEmail, 
+      title, 
+      content, 
+      location: parsedLocation, 
+      expenses: parsedExpenses,
+      currency,
+      country,
+      images: imagePaths // 📸 Saving image paths
     });
+    res.status(201).json({ message: "Entry saved successfully!", entry: newEntry });
+
+  } catch (err) {
+    console.error("Entry save error:", err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// 🗑️ NEW DELETE ROUTE: Deletes an entry by ID
+
+// 🗑️ NEW DELETE ROUTE
 app.delete('/entries/:id', (req, res) => {
   const { id } = req.params;
 
@@ -88,7 +131,7 @@ app.delete('/entries/:id', (req, res) => {
       res.status(500).json({ error: err.message });
     });
 });
-// END NEW DELETE ROUTE
+
 
 app.get('/entries/:userEmail', (req, res) => {
   const { userEmail } = req.params;
