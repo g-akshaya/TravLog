@@ -4,10 +4,10 @@ import Signup from './signup';
 import Login from './login';
 import Home from './home';
 import MyEntries from './entries';
+import Landing from './Landing'; // 🆕 ADDED: Import the missing Landing component
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Gallery from './Gallery'; 
 import Profile from './Profile'; 
-import Landing from './Landing'; // 🆕 Add this import
 
 function App() {
   const [user, setUser] = useState(null);
@@ -35,7 +35,7 @@ function App() {
         {/* Pass setUser to Login to update authentication state */}
         <Route path="/login" element={<Login setUser={setUser} />} /> 
         
-        {/* 🆕 New Landing Page Route: accessible to all */}
+        {/* 🆕 ADDED: Public Landing Page Route */}
         <Route path="/landing" element={<Landing />} />
 
         {/* Existing Authenticated Routes */}
@@ -48,7 +48,7 @@ function App() {
           element={isAuthenticated() ? <MyEntries /> : <Navigate to="/login" />}
         />
         
-        {/* NEW Authenticated Routes for Menu */}
+        {/* Authenticated Routes for Menu */}
         <Route
           path="/gallery"
           element={isAuthenticated() ? <Gallery /> : <Navigate to="/login" />}
@@ -61,7 +61,7 @@ function App() {
         {/* Default route: Directs to /home if authenticated, otherwise to /landing */}
         <Route
           path="/"
-          element={<Navigate to={isAuthenticated() ? "/home" : "/landing"} />}
+          element={<Navigate to={isAuthenticated() ? "/home" : "/landing"} />} 
         />
       </Routes>
     </BrowserRouter>

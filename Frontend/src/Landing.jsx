@@ -4,14 +4,21 @@ import 'bootstrap-icons/font/bootstrap-icons.css';
 import { useNavigate } from 'react-router-dom';
 
 /**
- * Animated and beautified Landing page for TravLog.
- * - Keeps Merriweather-like feel and Bootstrap icons.
- * - Adds floating paper-plane, animated CTAs, entrance animations, responsive layout.
- * - All styles are self-contained so you can paste this file directly.
+ * Landing.jsx — fixed GitHub CTA overlap
+ *
+ * - The corner GitHub link is hidden on large screens (>=900px)
+ *   so it doesn't overlap the in-card "View on GitHub" button.
+ * - On small screens, the in-card CTA moves into the flow and
+ *   the corner link appears (small icon + text) so repo remains reachable.
  */
 
 function Landing() {
   const navigate = useNavigate();
+  const repoUrl = "https://github.com/g-akshaya/TravLog.git";
+
+  const openRepo = () => {
+    window.open(repoUrl, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div className="landing-root">
@@ -49,11 +56,66 @@ function Landing() {
           align-items: center;
           transform: translateY(10px);
           animation: cardPop 700ms cubic-bezier(.2,.9,.2,1) both;
+          position: relative;
         }
 
         @keyframes cardPop {
           from { opacity: 0; transform: translateY(18px) scale(.995); }
           to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Top-right repo button inside the card */
+        .repo-cta {
+          position: absolute;
+          top: 14px;
+          right: 14px;
+          display:flex;
+          gap:8px;
+          align-items:center;
+          z-index: 5;
+        }
+        .repo-btn {
+          background: linear-gradient(90deg,#8b5e3c,#b5774f);
+          color: #fff;
+          border: none;
+          padding: 8px 12px;
+          border-radius: 10px;
+          font-weight: 700;
+          box-shadow: 0 8px 18px rgba(139,94,60,0.16);
+          display:inline-flex;
+          gap:8px;
+          align-items:center;
+          cursor:pointer;
+        }
+
+        /* Corner persistent GitHub link (small) */
+        .repo-corner {
+          position: fixed;
+          top: 12px;
+          right: 12px;
+          z-index: 1400;
+          background: rgba(255,255,255,0.9);
+          border-radius: 10px;
+          padding: 8px;
+          box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+          display:flex;
+          gap:8px;
+          align-items:center;
+        }
+        .repo-corner a { color:#5A3E2B; font-weight:700; text-decoration:none; display:flex; gap:8px; align-items:center; }
+
+        /* Hide the corner link on large screens so it doesn't overlap the in-card CTA */
+        @media (min-width: 900px) {
+          .repo-corner {
+            display: none;
+          }
+        }
+
+        /* And conversely hide the in-card CTA on very small screens (so a single corner control remains) */
+        @media (max-width: 520px) {
+          .repo-cta { display: none; }
+          .repo-corner { right: 10px; top: 10px; padding: 6px; }
+          .repo-corner a span { display: inline-block; }
         }
 
         /* Left text column */
@@ -210,16 +272,33 @@ function Landing() {
           .hero-card { grid-template-columns: 1fr; padding: 26px; gap: 18px; }
           .hero-right { order: -1; }
           .paper-plane { width:70px; height:70px; top:-8%; right:-8%; }
+          .repo-cta { position: static; margin-bottom: 12px; justify-content:flex-end; }
         }
 
         /* Keyboard focus style */
-        .btn-primary-animated:focus, .btn-secondary-ghost:focus {
+        .btn-primary-animated:focus, .btn-secondary-ghost:focus, .repo-btn:focus {
           outline: 3px solid rgba(139,94,60,0.14);
           outline-offset: 3px;
         }
       `}</style>
 
       <div className="hero-card" role="main" aria-labelledby="hero-title">
+        {/* GitHub CTA (top-right inside card) */}
+        <div className="repo-cta" aria-hidden>
+          <button className="repo-btn" onClick={openRepo} aria-label="View TravLog on GitHub">
+            <i className="bi bi-github" aria-hidden />
+            View on GitHub
+          </button>
+        </div>
+
+        {/* Corner persistent GitHub link (small) - hidden on wide screens to prevent overlap */}
+        <div className="repo-corner" aria-hidden>
+          <a href={repoUrl} target="_blank" rel="noopener noreferrer" title="View TravLog on GitHub">
+            <i className="bi bi-github" aria-hidden />
+            <span>GitHub</span>
+          </a>
+        </div>
+
         {/* LEFT - Brand + Text */}
         <div className="hero-left">
           <h1 id="hero-title">
